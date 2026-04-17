@@ -16,9 +16,9 @@
   }
   body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
   #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-
-
-
+  #status-bar{padding:8px 16px;font-size:0.78rem;font-weight:700;text-align:center;display:none}
+  #status-bar.ok{background:#D1FAE5;color:#065F46;display:block}
+  #status-bar.err{background:#FEE2E2;color:#991B1B;display:block;word-break:break-all}
   header{background:linear-gradient(135deg,var(--pink) 0%,var(--purple) 100%);padding:16px 20px 0;box-shadow:0 4px 16px rgba(255,107,157,0.3);position:sticky;top:0;z-index:100}
   .header-inner{display:flex;flex-direction:column;align-items:center;gap:12px}
   .logo{font-family:'Pacifico',cursive;font-size:1.5rem;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.2)}
@@ -69,21 +69,6 @@
   .log-time{font-size:0.72rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0}
   .delete-btn{flex-shrink:0;border:none;background:#FEE2E2;color:#DC2626;font-size:0.75rem;font-weight:800;font-family:'Nunito',sans-serif;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all 0.18s;white-space:nowrap}
   .delete-btn:hover{background:#DC2626;color:white}
-  .edit-btn{flex-shrink:0;border:none;background:#EDE9FE;color:#7C3AED;font-size:0.9rem;width:28px;height:28px;border-radius:8px;cursor:pointer;transition:all 0.18s;padding:0;display:flex;align-items:center;justify-content:center;line-height:1}
-  .edit-btn:hover{background:#7C3AED;color:white}
-  .log-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
-  .modal-overlay{position:fixed;inset:0;background:rgba(45,27,61,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-  .modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
-  .modal h3{font-family:'Pacifico',cursive;color:var(--pink);margin-bottom:4px;font-size:1.1rem}
-  .notes-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
-  .notes-food-emoji{font-size:2.5rem;line-height:1}
-  .notes-step{font-size:0.75rem;font-weight:700;color:var(--muted)}
-  .modal label{font-size:0.82rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px}
-  .modal select,.modal textarea,.modal input{width:100%;border:2px solid var(--border);border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:0.88rem;background:var(--surface);color:var(--text);outline:none}
-  .modal select:focus,.modal textarea:focus{border-color:var(--purple)}
-  .modal-btns{display:flex;gap:8px;margin-top:20px}
-  .modal-save{flex:1;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer}
-  .modal-cancel{padding:12px 16px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer}
   .foods-group{margin-bottom:20px}
   .group-label{font-size:0.78rem;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
   .food-row-btn{width:100%;display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:6px;cursor:pointer;transition:all 0.2s;text-align:left}
@@ -121,7 +106,7 @@
 </head>
 <body>
 <div id="app">
-
+  <div id="status-bar">Connecting…</div>
   <header>
     <div class="header-inner">
       <span class="logo">🌸 Florrie's Tracker</span>
@@ -139,7 +124,7 @@
 <script>
 // ── Firebase REST API config ─────────────────────────────────────────────────
 // No imports needed — talks to Firebase over plain fetch()
-var DB = "https://florrie-s-tracker-default-rtdb.europe-west1.firebasedatabase.app";
+var DB = "https://florrie-s-tracker-default-rtdb.firebaseio.com";
 
 // ── Foods ────────────────────────────────────────────────────────────────────
 var FOODS = [
@@ -172,10 +157,11 @@ var view         = "log";
 var selectedFoods = [];
 var focusFood    = null;
 var currentMeal  = "breakfast";
+var currentNotes = "";
 var pollInterval = null;
 
 // ── Status bar ───────────────────────────────────────────────────────────────
-function setStatus(msg, type) { return; // disabled
+function setStatus(msg, type) {
   var bar = document.getElementById("status-bar");
   bar.textContent = msg;
   bar.className = type || "";
@@ -196,13 +182,6 @@ function dbPush(path, data) {
 }
 function dbDelete(path) {
   return fetch(DB + path + ".json", { method: "DELETE" });
-}
-function dbPatch(path, data) {
-  return fetch(DB + path + ".json", {
-    method: "PATCH",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(data)
-  }).then(function(r) { return r.json(); });
 }
 
 // ── Load + poll ──────────────────────────────────────────────────────────────
@@ -226,9 +205,7 @@ function loadLogs() {
 function startPolling() {
   loadLogs().then(function() { renderContent(); });
   pollInterval = setInterval(function() {
-    loadLogs().then(function() {
-      if (!window._notesFocused) renderContent();
-    });
+    loadLogs().then(function() { renderContent(); });
   }, 5000); // refresh every 5s so both phones stay in sync
 }
 
@@ -327,7 +304,8 @@ function renderLog() {
     +'<input type="text" id="custom-food-input" placeholder="Add other food…" maxlength="40">'
     +'<button id="add-custom-btn" class="pill-btn">+ Add</button></div>'
     +selSummary
-    +'<button class="big-btn" id="save-meal-btn"'+(selectedFoods.length===0?" disabled":"")+'>Next: Add Notes ➡️</button>'
+    +'<div class="log-notes-row"><textarea id="log-notes" placeholder="Notes? (loved it, refused, reaction…)" rows="2">'+currentNotes+'</textarea></div>'
+    +'<button class="big-btn" id="save-meal-btn"'+(selectedFoods.length===0?" disabled":"")+'>Save Meal Log 💾</button>'
     +'</section>';
 }
 
@@ -351,10 +329,7 @@ function renderHistory() {
               +'<div class="log-info"><strong>'+l.label+'</strong>'
               +(l.notes?'<span class="log-note">'+l.notes+'</span>':"")+'</div>'
               +'<span class="log-time">'+fmtTime(l.timestamp)+'</span>'
-              +'<div class="log-actions">'
-              +'<button class="edit-btn" data-key="'+l._key+'" data-label="'+l.label+'" data-meal="'+l.meal+'" data-notes="'+(l.notes||'')+'" data-action="edit-log">✏️</button>'
-              +'<button class="delete-btn" data-key="'+l._key+'" data-action="delete-log">🗑️</button>'
-              +'</div>'
+              +'<button class="delete-btn" data-key="'+l._key+'" data-action="delete-log">🗑️ Delete</button>'
               +'</div>';
           }).join("")+'</div></div>';
       }).join("")+'</div>';
@@ -406,68 +381,10 @@ function renderFoodDetail(foodId) {
         return '<div class="log-item"><span class="log-emoji">'+mealLabel(l.meal)+'</span>'
           +'<div class="log-info"><strong>'+fmtDT(l.timestamp)+'</strong>'
           +(l.notes?'<span class="log-note">'+l.notes+'</span>':"")+'</div>'
-          +'<div class="log-actions">'
-          +'<button class="edit-btn" data-key="'+l._key+'" data-label="'+l.label+'" data-meal="'+l.meal+'" data-notes="'+(l.notes||'')+'" data-action="edit-log">✏️</button>'
-          +'<button class="delete-btn" data-key="'+l._key+'" data-action="delete-log">🗑️</button>'
-          +'</div>'
+          +'<button class="delete-btn" data-key="'+l._key+'" data-action="delete-log">🗑️ Delete</button>'
           +'</div>';
       }).join(""))
     +'</section>';
-}
-
-// ── Edit modal ───────────────────────────────────────────────────────────────
-function openEditModal(key, label, meal, notes) {
-  // Remove any existing modal
-  var existing = document.getElementById("edit-modal");
-  if (existing) existing.remove();
-
-  var overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.id = "edit-modal";
-  overlay.innerHTML = '<div class="modal">'
-    +'<h3>Edit Entry ✏️</h3>'
-    +'<label>Food</label>'
-    +'<input type="text" id="edit-label" value="'+label+'">'
-    +'<label>Meal</label>'
-    +'<select id="edit-meal">'
-    +['breakfast','lunch','dinner','snack'].map(function(m){
-      return '<option value="'+m+'"'+(meal===m?' selected':'')+'>'+{breakfast:'🌅 Breakfast',lunch:'☀️ Lunch',dinner:'🌙 Dinner',snack:'🍪 Snack'}[m]+'</option>';
-    }).join('')
-    +'</select>'
-    +'<label>Notes</label>'
-    +'<textarea id="edit-notes" rows="2">'+notes+'</textarea>'
-    +'<div class="modal-btns">'
-    +'<button class="modal-cancel" id="edit-cancel">Cancel</button>'
-    +'<button class="modal-save" id="edit-save">Save Changes</button>'
-    +'</div></div>';
-
-  document.body.appendChild(overlay);
-
-  document.getElementById("edit-cancel").addEventListener("click", function(){
-    overlay.remove();
-  });
-  overlay.addEventListener("click", function(e){
-    if (e.target===overlay) overlay.remove();
-  });
-  document.getElementById("edit-save").addEventListener("click", function(){
-    var newLabel = document.getElementById("edit-label").value.trim();
-    var newMeal  = document.getElementById("edit-meal").value;
-    var newNotes = document.getElementById("edit-notes").value.trim();
-    if (!newLabel) return;
-    var saveBtn = document.getElementById("edit-save");
-    saveBtn.disabled = true;
-    saveBtn.textContent = "Saving…";
-    dbPatch("/logs/"+key, {label:newLabel, meal:newMeal, notes:newNotes})
-      .then(function(){
-        overlay.remove();
-        toast("✅ Entry updated!");
-        loadLogs().then(function(){ renderContent(); });
-      }).catch(function(e){
-        toast("⚠️ Update failed: "+e.message, "red");
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Save Changes";
-      });
-  });
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -486,7 +403,8 @@ function bindEvents() {
     btn.addEventListener("click", function(){ currentMeal=btn.dataset.meal; renderContent(); });
   });
 
-  // notes are now handled per-food in the modal
+  var notesEl = document.getElementById("log-notes");
+  if (notesEl) notesEl.addEventListener("input", function(e){ currentNotes=e.target.value; });
 
   var customBtn = document.getElementById("add-custom-btn");
   if (customBtn) customBtn.addEventListener("click", function(){
@@ -508,17 +426,6 @@ function bindEvents() {
   var backBtn = document.querySelector("[data-action='back-to-foods']");
   if (backBtn) backBtn.addEventListener("click", function(){ focusFood=null; renderContent(); });
 
-  document.querySelectorAll("[data-action='edit-log']").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      openEditModal(
-        btn.dataset.key,
-        btn.dataset.label,
-        btn.dataset.meal,
-        btn.dataset.notes
-      );
-    });
-  });
-
   document.querySelectorAll("[data-action='delete-log']").forEach(function(btn){
     btn.addEventListener("click", function(){
       if (!confirm("Delete this entry?")) return;
@@ -534,106 +441,42 @@ function bindEvents() {
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
 }
 
-// ── Per-food notes modal ─────────────────────────────────────────────────────
+// ── Save ─────────────────────────────────────────────────────────────────────
 function saveMeal() {
-  var allF   = FOODS.concat(getCustomFoods());
-  var toSave = selectedFoods.slice();
+  var allF    = FOODS.concat(getCustomFoods());
+  var toSave  = selectedFoods.slice();
   if (!toSave.length) return;
-  // Build list of {food, notes} — start with empty notes
-  var entries = toSave.map(function(id){
+
+  var btn = document.getElementById("save-meal-btn");
+  if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+
+  var counts   = foodCountMap();
+  var promises = toSave.map(function(id){
     var food = allF.find(function(f){return f.id===id;})||{id:id,label:id,emoji:"🍽️"};
-    return {food:food, notes:""};
-  });
-  openNotesModal(entries, 0);
-}
-
-function openNotesModal(entries, idx) {
-  var existing = document.getElementById("notes-modal");
-  if (existing) existing.remove();
-
-  var entry  = entries[idx];
-  var food   = entry.food;
-  var total  = entries.length;
-  var isLast = idx === total - 1;
-
-  var overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.id = "notes-modal";
-  overlay.innerHTML =
-    '<div class="modal">'
-    +'<div class="notes-modal-header">'
-    +'<span class="notes-food-emoji">'+food.emoji+'</span>'
-    +'<div>'
-    +'<h3>'+food.label+'</h3>'
-    +'<span class="notes-step">'+( total>1 ? (idx+1)+' of '+total : 'Add notes' )+'</span>'
-    +'</div>'
-    +'</div>'
-    +'<label style="margin-top:12px;display:block;font-size:0.82rem;font-weight:700;color:var(--muted)">Notes (optional)</label>'
-    +'<textarea id="notes-input" rows="3" placeholder="e.g. loved it, refused, mild reaction…" '
-    +'style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 12px;'
-    +'font-family:'Nunito',sans-serif;font-size:0.88rem;background:var(--surface);color:var(--text);'
-    +'outline:none;margin-top:6px;resize:none;">'+entry.notes+'</textarea>'
-    +'<div class="modal-btns" style="margin-top:16px">'
-    +(idx>0?'<button class="modal-cancel" id="notes-back">← Back</button>':"")
-    +'<button class="modal-cancel" id="notes-skip">Skip</button>'
-    +'<button class="modal-save" id="notes-next">'+(isLast?'Save All 💾':'Next →')+'</button>'
-    +'</div>'
-    +'</div>';
-
-  document.body.appendChild(overlay);
-
-  var inp = document.getElementById("notes-input");
-  // focus without triggering layout shift on some mobiles
-  setTimeout(function(){ inp && inp.focus(); }, 100);
-
-  function advance(notesVal) {
-    entries[idx].notes = notesVal || "";
-    if (isLast) {
-      overlay.remove();
-      doSave(entries);
-    } else {
-      overlay.remove();
-      openNotesModal(entries, idx+1);
-    }
-  }
-
-  document.getElementById("notes-next").addEventListener("click", function(){
-    advance(inp.value.trim());
-  });
-  document.getElementById("notes-skip").addEventListener("click", function(){
-    advance("");
-  });
-  var backBtn = document.getElementById("notes-back");
-  if (backBtn) backBtn.addEventListener("click", function(){
-    entries[idx].notes = inp.value.trim();
-    overlay.remove();
-    openNotesModal(entries, idx-1);
-  });
-}
-
-function doSave(entries) {
-  var counts = foodCountMap();
-  var promises = entries.map(function(e){
     return dbPush("/logs", {
-      food:      e.food.id,
-      label:     e.food.label,
-      emoji:     e.food.emoji,
+      food:      food.id,
+      label:     food.label,
+      emoji:     food.emoji,
       meal:      currentMeal,
-      notes:     e.notes,
+      notes:     currentNotes,
       timestamp: Date.now()
     });
   });
+
   Promise.all(promises).then(function(){
-    var allF = FOODS.concat(getCustomFoods());
-    var newM = entries.filter(function(e){ return (counts[e.food.id]||0)+1===MILESTONE; });
+    var newM = toSave.filter(function(id){ return (counts[id]||0)+1===MILESTONE; });
     selectedFoods = [];
-    toast("✅ "+entries.length+" food"+(entries.length>1?"s":"")+" logged!");
+    currentNotes  = "";
+    toast("✅ "+toSave.length+" food"+(toSave.length>1?"s":"")+" logged!");
     if (newM.length){
-      setTimeout(function(){ toast("🎉 "+newM[0].food.label+" hit "+MILESTONE+" tries!","green"); },800);
+      var f = allF.find(function(x){return x.id===newM[0];});
+      setTimeout(function(){ toast("🎉 "+(f?f.label:"A food")+" hit "+MILESTONE+" tries!","green"); },800);
     }
     loadLogs().then(function(){ renderContent(); });
   }).catch(function(e){
+    setStatus("❌ Save failed: "+e.message, "err");
     toast("⚠️ Save failed: "+e.message,"red");
+    if (btn) { btn.disabled=false; btn.textContent="Save Meal Log 💾"; }
   });
 }
 
