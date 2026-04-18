@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Florrie's Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#FF6B9D;--pink2:#ff8fb5;--purple:#C084FC;
+  --mint:#6EE7B7;--yellow:#FDE68A;--peach:#FDBA74;
+  --bg:#FFF5F9;--surface:#FFFFFF;--text:#2D1B3D;
+  --muted:#9B7FB6;--border:#F0D6E8;--done:#10B981;
+  --radius:16px;--shadow:0 4px 20px rgba(192,132,252,0.15)
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,var(--pink) 0%,var(--purple) 100%);padding:16px 20px 0;box-shadow:0 4px 16px rgba(255,107,157,0.3);position:sticky;top:0;z-index:100}
+.header-inner{display:flex;flex-direction:column;align-items:center;gap:12px}
+.logo{font-family:'Pacifico',cursive;font-size:1.5rem;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.2)}
+nav{display:flex;gap:4px;background:rgba(255,255,255,0.2);border-radius:12px 12px 0 0;padding:4px}
+.nav-btn{flex:1;border:none;background:transparent;color:rgba(255,255,255,0.85);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.78rem;padding:8px 12px;border-radius:8px 8px 0 0;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.nav-btn.active{background:var(--bg);color:var(--pink)}
+.nav-btn:hover:not(.active){background:rgba(255,255,255,0.3)}
+main{flex:1;padding:20px 16px}
+.section-title{font-family:'Pacifico',cursive;font-size:1.2rem;color:var(--pink);margin-bottom:16px}
+.meal-selector{margin-bottom:16px}
+.meal-selector label{font-weight:700;font-size:0.85rem;color:var(--muted);display:block;margin-bottom:8px}
+.meal-btns{display:flex;gap:6px;flex-wrap:wrap}
+.meal-btn{border:2px solid var(--border);background:var(--surface);color:var(--text);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.78rem;padding:6px 12px;border-radius:20px;cursor:pointer;transition:all 0.2s}
+.meal-btn.active{background:var(--pink);border-color:var(--pink);color:white}
+.foods-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.food-card{border:2.5px solid var(--border);background:var(--surface);border-radius:14px;padding:10px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.18s;position:relative}
+.food-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.food-card.selected{border-color:var(--pink);background:#FFF0F6;box-shadow:0 0 0 2px var(--pink2)}
+.food-card.reached{border-color:var(--done);background:#F0FDF4}
+.food-emoji{font-size:1.6rem;line-height:1}
+.food-label{font-size:0.62rem;font-weight:700;color:var(--text);text-align:center;line-height:1.2}
+.food-chip{font-size:0.58rem;font-weight:800;background:var(--border);color:var(--muted);padding:1px 5px;border-radius:8px}
+.chip-done{background:#D1FAE5;color:var(--done)}
+.star-badge{position:absolute;top:3px;right:3px;font-size:0.65rem}
+.custom-food-row{display:flex;gap:8px;margin-bottom:12px}
+.custom-food-row input{flex:1;border:2px solid var(--border);border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:0.85rem;background:var(--surface);color:var(--text);outline:none}
+.custom-food-row input:focus{border-color:var(--pink)}
+.selected-summary{background:#FFF0F6;border:1.5px solid var(--pink2);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;font-weight:600;color:var(--pink)}
+.pill-btn{border:none;background:var(--purple);color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;padding:8px 14px;border-radius:20px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.pill-btn:hover{background:var(--pink);transform:translateY(-1px)}
+.big-btn{width:100%;padding:16px;border:none;border-radius:var(--radius);background:linear-gradient(135deg,var(--pink),var(--purple));color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 16px rgba(255,107,157,0.4)}
+.big-btn:hover:not(:disabled){transform:translateY(-2px)}
+.big-btn:disabled{opacity:0.4;cursor:not-allowed}
+.back-btn{border:none;background:transparent;color:var(--pink);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;padding:4px 0;margin-bottom:16px;display:inline-block}
+.day-card{background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.day-header{background:linear-gradient(90deg,var(--pink2),var(--purple));color:white;font-weight:800;font-size:0.9rem;padding:10px 16px}
+.meal-group{padding:10px 12px;border-bottom:1px solid var(--border)}
+.meal-group:last-child{border-bottom:none}
+.meal-group-label{font-size:0.78rem;font-weight:800;color:var(--muted);margin-bottom:6px}
+.log-items{display:flex;flex-direction:column;gap:6px}
+.log-item{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:8px 10px}
+.log-emoji{font-size:1.2rem;flex-shrink:0}
+.log-info{flex:1;min-width:0}
+.log-info strong{font-size:0.85rem;display:block}
+.log-note{font-size:0.75rem;color:var(--muted);display:block;margin-top:2px}
+.log-time{font-size:0.72rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0}
+.log-actions{display:flex;gap:4px;flex-shrink:0}
+.edit-btn{border:none;background:#EDE9FE;color:#7C3AED;font-size:0.9rem;width:28px;height:28px;border-radius:8px;cursor:pointer;transition:all 0.18s;padding:0}
+.edit-btn:hover{background:#7C3AED;color:white}
+.delete-btn{border:none;background:#FEE2E2;color:#DC2626;font-size:0.9rem;width:28px;height:28px;border-radius:8px;cursor:pointer;transition:all 0.18s;padding:0}
+.delete-btn:hover{background:#DC2626;color:white}
+.foods-group{margin-bottom:20px}
+.group-label{font-size:0.78rem;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+.food-row-btn{width:100%;display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:6px;cursor:pointer;transition:all 0.2s;text-align:left}
+.food-row-btn:hover{border-color:var(--pink);transform:translateX(3px)}
+.food-row-emoji{font-size:1.4rem;flex-shrink:0}
+.food-row-info{flex:1}
+.food-row-label{font-size:0.88rem;font-weight:700;color:var(--text);display:block;margin-bottom:4px}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.big-progress{height:12px;border-radius:6px;margin:12px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));border-radius:3px;transition:width 0.4s}
+.fill-done{background:linear-gradient(90deg,var(--mint),var(--done))}
+.food-row-count{font-size:0.78rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.count-done{color:var(--done)}
+.export-btn{margin-top:8px;width:100%;text-align:center;padding:12px;border-radius:var(--radius);font-size:0.9rem}
+.food-hero{text-align:center;margin-bottom:16px}
+.hero-emoji{font-size:4rem;display:block;margin-bottom:8px}
+.food-hero h2{font-family:'Pacifico',cursive;color:var(--pink);font-size:1.6rem}
+.milestone-badge{display:inline-block;background:linear-gradient(135deg,var(--yellow),var(--peach));color:var(--text);font-weight:800;font-size:0.85rem;padding:4px 14px;border-radius:20px;margin-top:8px}
+.count-display{text-align:center;margin-bottom:8px}
+.count-number{font-family:'Pacifico',cursive;font-size:4rem;color:var(--pink);line-height:1}
+.count-number.count-done{color:var(--done)}
+.count-label{font-size:0.9rem;font-weight:700;color:var(--muted)}
+.count-sub{font-size:0.78rem;color:var(--muted)}
+.dot-track{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:12px 0 20px}
+.dot{width:24px;height:24px;border-radius:50%;background:var(--border)}
+.dot.dot-filled{background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 2px 6px rgba(255,107,157,0.4)}
+.log-history-title{font-weight:800;color:var(--muted);font-size:0.85rem;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px}
+.empty-state{text-align:center;color:var(--muted);padding:40px 20px;font-size:1rem;line-height:1.6}
+.modal-overlay{position:fixed;inset:0;background:rgba(45,27,61,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-title{font-family:'Pacifico',cursive;color:var(--pink);margin-bottom:4px;font-size:1.1rem}
+.modal-food-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.modal-food-emoji{font-size:2.5rem;line-height:1}
+.modal-step{font-size:0.75rem;font-weight:700;color:var(--muted);display:block;margin-top:2px}
+.modal label{font-size:0.82rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px}
+.modal select,.modal textarea,.modal input[type=text]{width:100%;border:2px solid var(--border);border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:0.88rem;background:var(--surface);color:var(--text);outline:none}
+.modal select:focus,.modal textarea:focus,.modal input[type=text]:focus{border-color:var(--purple)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.modal-save{flex:1;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.9rem;cursor:pointer}
+.modal-cancel{padding:12px 16px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer}
+#toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--text);color:white;padding:10px 20px;border-radius:20px;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.85rem;opacity:0;transform:translateY(10px);transition:all 0.3s;white-space:nowrap}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.toast-green{background:var(--done)}
+.toast.toast-red{background:#EF4444}
+
+.admin-food-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.admin-food-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px}
+.admin-food-row .aemoji{font-size:1.4rem;cursor:pointer;min-width:32px;text-align:center;border:2px solid var(--border);border-radius:8px;padding:2px 4px;background:var(--bg)}
+.admin-food-row .aemoji:hover{border-color:var(--pink)}
+.admin-food-row .alabel{flex:1;font-size:0.88rem;font-weight:700;color:var(--text)}
+.admin-food-row .abuilt{font-size:0.7rem;color:var(--muted);font-weight:600}
+.admin-food-row .adel{border:none;background:#FEE2E2;color:#DC2626;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:0.9rem;flex-shrink:0}
+.admin-food-row .adel:hover{background:#DC2626;color:white}
+.admin-add-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.admin-add-row input{flex:1;border:2px solid var(--border);border-radius:10px;padding:8px 12px;font-family:'Nunito',sans-serif;font-size:0.88rem;background:var(--surface);color:var(--text);outline:none}
+.admin-add-row input:focus{border-color:var(--pink)}
+.emoji-picker{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px;box-shadow:var(--shadow)}
+.emoji-picker-title{font-size:0.78rem;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.emoji-opt{font-size:1.3rem;border:2px solid transparent;background:transparent;border-radius:8px;cursor:pointer;padding:4px;transition:all 0.15s;line-height:1}
+.emoji-opt:hover{border-color:var(--pink);background:#FFF0F6}
+.emoji-opt.picked{border-color:var(--pink);background:#FFF0F6}
+.admin-info{background:#EDE9FE;border-radius:10px;padding:10px 14px;font-size:0.8rem;color:#5B21B6;font-weight:600;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-inner">
+      <span class="logo">&#x1F338; Florrie's Tracker</span>
+      <nav>
+        <button class="nav-btn" id="nav-log">Log Meal</button>
+        <button class="nav-btn" id="nav-history">History</button>
+        <button class="nav-btn" id="nav-food">Foods</button>
+        <button class="nav-btn" id="nav-admin">&#x2699;&#xFE0F;</button>
+      </nav>
+    </div>
+  </header>
+  <main id="content"></main>
+  <div id="toast-container"></div>
+</div>
+
+<script>
+
+var DB = "https://florrie-s-tracker-default-rtdb.europe-west1.firebasedatabase.app";
+var MILESTONE = 10;
+
+var FOODS = [
+  {id:"avocado",      emoji:"&#x1F951;", label:"Avocado"},
+  {id:"banana",       emoji:"&#x1F34C;", label:"Banana"},
+  {id:"apple",        emoji:"&#x1F34E;", label:"Apple"},
+  {id:"rice_cereal",  emoji:"&#x1F35A;", label:"Rice Cereal"},
+  {id:"sweet_potato", emoji:"&#x1F360;", label:"Sweet Potato"},
+  {id:"oatmeal",      emoji:"&#x1F33E;", label:"Oatmeal"},
+  {id:"spinach",      emoji:"&#x1F96C;", label:"Spinach"},
+  {id:"chicken",      emoji:"&#x1F357;", label:"Chicken"},
+  {id:"peas",         emoji:"&#x1FAD9;", label:"Peas"},
+  {id:"pear",         emoji:"&#x1F350;", label:"Pear"},
+  {id:"yogurt",       emoji:"&#x1F95B;", label:"Yogurt"},
+  {id:"carrot",       emoji:"&#x1F955;", label:"Carrot"},
+  {id:"broccoli",     emoji:"&#x1F966;", label:"Broccoli"},
+  {id:"prune",        emoji:"&#x1F7E3;", label:"Prune"},
+  {id:"green_bean",   emoji:"&#x1FAD8;", label:"Green Bean"},
+  {id:"mango",        emoji:"&#x1F96D;", label:"Mango"},
+  {id:"egg",          emoji:"&#x1F95A;", label:"Egg"},
+  {id:"strawberry",   emoji:"&#x1F353;", label:"Strawberry"},
+  {id:"pasta",        emoji:"&#x1F35D;", label:"Pasta"},
+  {id:"blueberry",    emoji:"&#x1FAD0;", label:"Blueberry"}
+];
+
+var allLogs = [];
+var view = "log";
+var selectedFoods = [];
+var focusFood = null;
+var currentMeal = "breakfast";
+
+function getCustomFoods() {
+  try { return JSON.parse(localStorage.getItem("cf") || "[]"); } catch(e) { return []; }
+}
+function saveCustomFood(label) {
+  var foods = getCustomFoods();
+  var id = label.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+  if (!foods.find(function(f){return f.id===id;}) && !FOODS.find(function(f){return f.id===id;}))
+    foods.push({id:id, emoji:"&#x1F37D;", label:label});
+  localStorage.setItem("cf", JSON.stringify(foods));
+  return id;
+}
+function allFoods() { return FOODS.concat(getCustomFoods()); }
+function foodCountMap() {
+  var m = {};
+  allLogs.forEach(function(l){ m[l.food] = (m[l.food]||0)+1; });
+  return m;
+}
+function fmtDate(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+}
+function fmtTime(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+}
+function mealLabel(m) {
+  return {breakfast:"Breakfast",lunch:"Lunch",dinner:"Dinner",snack:"Snack"}[m] || m;
+}
+function mealEmoji(m) {
+  return {breakfast:"&#x1F305;",lunch:"&#x2600;&#xFE0F;",dinner:"&#x1F319;",snack:"&#x1F36A;"}[m] || "";
+}
+
+function dbGet(path) {
+  return fetch(DB + path + ".json").then(function(r){ return r.json(); });
+}
+function dbPost(path, data) {
+  return fetch(DB + path + ".json", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)}).then(function(r){ return r.json(); });
+}
+function dbPatch(path, data) {
+  return fetch(DB + path + ".json", {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)}).then(function(r){ return r.json(); });
+}
+function dbDelete(path) {
+  return fetch(DB + path + ".json", {method:"DELETE"});
+}
+
+function loadLogs() {
+  return dbGet("/logs").then(function(data) {
+    allLogs = [];
+    if (data && typeof data === "object") {
+      Object.keys(data).forEach(function(key){
+        allLogs.push(Object.assign({_key:key}, data[key]));
+      });
+    }
+    allLogs.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+  });
+}
+
+function toast(msg, color) {
+  var t = document.createElement("div");
+  t.className = "toast" + (color ? " toast-"+color : "");
+  t.innerHTML = msg;
+  document.getElementById("toast-container").appendChild(t);
+  setTimeout(function(){ t.classList.add("show"); }, 10);
+  setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 400); }, 3500);
+}
+
+function render() {
+  var el = document.getElementById("content");
+  if (!el) return;
+  document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.remove("active"); });
+  if (view === "log") {
+    document.getElementById("nav-log").classList.add("active");
+    el.innerHTML = buildLog();
+  } else if (view === "history") {
+    document.getElementById("nav-history").classList.add("active");
+    el.innerHTML = buildHistory();
+  } else if (view === "food") {
+    document.getElementById("nav-food").classList.add("active");
+    el.innerHTML = focusFood ? buildFoodDetail(focusFood) : buildFoodsOverview();
+  }
+  bindEvents();
+}
+
+function buildLog() {
+  var counts = foodCountMap();
+  var af = allFoods();
+  var cards = af.map(function(f) {
+    var c = counts[f.id]||0;
+    var reached = c >= MILESTONE;
+    var sel = selectedFoods.indexOf(f.id) > -1;
+    return '<button class="food-card' + (sel?" selected":"") + (reached?" reached":"") + '" data-food="' + f.id + '">'
+      + '<span class="food-emoji">' + f.emoji + '</span>'
+      + '<span class="food-label">' + f.label + '</span>'
+      + '<span class="food-chip' + (reached?" chip-done":"") + '">' + c + '/' + MILESTONE + '</span>'
+      + (reached ? '<span class="star-badge">&#x2B50;</span>' : '')
+      + '</button>';
+  }).join("");
+
+  var summary = selectedFoods.length > 0
+    ? '<div class="selected-summary">Selected: ' + selectedFoods.map(function(id){
+        var f = af.find(function(x){return x.id===id;});
+        return f ? f.emoji + " " + f.label : id;
+      }).join(", ") + '</div>' : "";
+
+  return '<section>'
+    + '<h2 class="section-title">What did Florrie eat?</h2>'
+    + '<div class="meal-selector"><label>Meal time:</label><div class="meal-btns">'
+    + ["breakfast","lunch","dinner","snack"].map(function(m){
+        return '<button class="meal-btn' + (currentMeal===m?" active":"") + '" data-meal="' + m + '">' + mealEmoji(m) + ' ' + mealLabel(m) + '</button>';
+      }).join("")
+    + '</div></div>'
+    + '<div class="foods-grid">' + cards + '</div>'
+    + '<div class="custom-food-row"><input type="text" id="custom-input" placeholder="Add other food..." maxlength="40"><button id="custom-add" class="pill-btn">+ Add</button></div>'
+    + summary
+    + '<button class="big-btn" id="save-btn"' + (selectedFoods.length===0?" disabled":"") + '>Next: Add Notes &#x27A1;</button>'
+    + '</section>';
+}
+
+function buildHistory() {
+  if (!allLogs.length) return '<div class="empty-state">No meals logged yet &#x1F37C;<br><small>Start by logging Florrie\'s first meal!</small></div>';
+  var grouped = {};
+  allLogs.forEach(function(l){
+    var k = fmtDate(l.timestamp);
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(l);
+  });
+  return '<section><h2 class="section-title">Meal History</h2>'
+    + Object.keys(grouped).map(function(date) {
+        var byMeal = {};
+        grouped[date].forEach(function(l){ if (!byMeal[l.meal]) byMeal[l.meal]=[]; byMeal[l.meal].push(l); });
+        return '<div class="day-card"><div class="day-header">' + date + '</div>'
+          + Object.keys(byMeal).map(function(meal){
+              return '<div class="meal-group"><div class="meal-group-label">' + mealEmoji(meal) + ' ' + mealLabel(meal) + '</div><div class="log-items">'
+                + byMeal[meal].map(function(l){
+                    return '<div class="log-item">'
+                      + '<span class="log-emoji">' + (l.emoji||"&#x1F37D;") + '</span>'
+                      + '<div class="log-info"><strong>' + l.label + '</strong>' + (l.notes?'<span class="log-note">'+l.notes+'</span>':"") + '</div>'
+                      + '<span class="log-time">' + fmtTime(l.timestamp) + '</span>'
+                      + '<div class="log-actions">'
+                      + '<button class="edit-btn" data-key="' + l._key + '" data-label="' + l.label + '" data-meal="' + l.meal + '" data-notes="' + (l.notes||"") + '">&#x270F;&#xFE0F;</button>'
+                      + '<button class="delete-btn" data-key="' + l._key + '">&#x1F5D1;</button>'
+                      + '</div></div>';
+                  }).join("")
+                + '</div></div>';
+            }).join("")
+          + '</div>';
+      }).join("")
+    + '</section>';
+}
+
+function buildFoodsOverview() {
+  var counts = foodCountMap();
+  var af = allFoods();
+  var tried = af.filter(function(f){ return (counts[f.id]||0)>0; }).sort(function(a,b){ return (counts[b.id]||0)-(counts[a.id]||0); });
+  var untried = af.filter(function(f){ return !(counts[f.id]||0); });
+  function row(f) {
+    var c = counts[f.id]||0, pct = Math.min(100,(c/MILESTONE)*100), reached = c>=MILESTONE;
+    return '<button class="food-row-btn" data-open="' + f.id + '">'
+      + '<span class="food-row-emoji">' + f.emoji + '</span>'
+      + '<div class="food-row-info"><span class="food-row-label">' + f.label + (reached?" &#x2B50;":"") + '</span>'
+      + '<div class="progress-bar"><div class="progress-fill' + (reached?" fill-done":"") + '" style="width:' + pct + '%"></div></div></div>'
+      + '<span class="food-row-count' + (reached?" count-done":"") + '">' + c + '/' + MILESTONE + '</span>'
+      + '</button>';
+  }
+  return '<section><h2 class="section-title">Food Tracker</h2>'
+    + (tried.length ? '<div class="foods-group"><div class="group-label">Tried (' + tried.length + ')</div>' + tried.map(row).join("") + '</div>' : "")
+    + (untried.length ? '<div class="foods-group"><div class="group-label">Not tried yet (' + untried.length + ')</div>' + untried.map(row).join("") + '</div>' : "")
+    + '<button class="pill-btn export-btn" id="export-btn">&#x1F4CA; Export to CSV</button>'
+    + '</section>';
+}
+
+function buildFoodDetail(foodId) {
+  var af = allFoods();
+  var food = af.find(function(f){ return f.id===foodId; });
+  if (!food) return "";
+  var logs = allLogs.filter(function(l){ return l.food===foodId; });
+  var count = logs.length, reached = count>=MILESTONE, pct = Math.min(100,(count/MILESTONE)*100);
+  return '<section>'
+    + '<button id="back-btn" class="back-btn">&#x2190; All Foods</button>'
+    + '<div class="food-hero"><span class="hero-emoji">' + food.emoji + '</span><h2>' + food.label + '</h2>'
+    + (reached ? '<div class="milestone-badge">&#x1F389; Milestone reached!</div>' : "") + '</div>'
+    + '<div class="count-display"><div class="count-number' + (reached?" count-done":"") + '">' + count + '</div><div class="count-label">times given</div><div class="count-sub">Goal: ' + MILESTONE + '</div></div>'
+    + '<div class="progress-bar big-progress"><div class="progress-fill' + (reached?" fill-done":"") + '" style="width:' + pct + '%"></div></div>'
+    + '<div class="dot-track">' + Array.from({length:MILESTONE}).map(function(_,i){ return '<div class="dot' + (i<count?" dot-filled":"") + '"></div>'; }).join("") + '</div>'
+    + '<h3 class="log-history-title">Log History</h3>'
+    + (!logs.length ? '<div class="empty-state">Not logged yet</div>' : logs.map(function(l){
+        return '<div class="log-item">'
+          + '<span class="log-emoji">' + mealEmoji(l.meal) + '</span>'
+          + '<div class="log-info"><strong>' + fmtDate(l.timestamp) + ' ' + fmtTime(l.timestamp) + '</strong>' + (l.notes?'<span class="log-note">'+l.notes+'</span>':"") + '</div>'
+          + '<div class="log-actions">'
+          + '<button class="edit-btn" data-key="' + l._key + '" data-label="' + l.label + '" data-meal="' + l.meal + '" data-notes="' + (l.notes||"") + '">&#x270F;&#xFE0F;</button>'
+          + '<button class="delete-btn" data-key="' + l._key + '">&#x1F5D1;</button>'
+          + '</div></div>';
+      }).join(""))
+    + '</section>';
+}
+
+function bindEvents() {
+  document.querySelectorAll(".food-card").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.dataset.food;
+      selectedFoods = selectedFoods.indexOf(id) > -1
+        ? selectedFoods.filter(function(x){ return x!==id; })
+        : selectedFoods.concat([id]);
+      render();
+    });
+  });
+  document.querySelectorAll(".meal-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){ currentMeal = btn.dataset.meal; render(); });
+  });
+  var customAdd = document.getElementById("custom-add");
+  if (customAdd) customAdd.addEventListener("click", function(){
+    var inp = document.getElementById("custom-input");
+    var val = inp.value.trim();
+    if (!val) return;
+    var id = saveCustomFood(val);
+    if (selectedFoods.indexOf(id) === -1) selectedFoods.push(id);
+    render();
+  });
+  var saveBtn = document.getElementById("save-btn");
+  if (saveBtn) saveBtn.addEventListener("click", startNoteFlow);
+  document.querySelectorAll("[data-open]").forEach(function(btn){
+    btn.addEventListener("click", function(){ focusFood = btn.dataset.open; render(); });
+  });
+  var backBtn = document.getElementById("back-btn");
+  if (backBtn) backBtn.addEventListener("click", function(){ focusFood = null; render(); });
+  document.querySelectorAll(".delete-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if (!confirm("Delete this entry?")) return;
+      dbDelete("/logs/" + btn.dataset.key).then(function(){
+        toast("Deleted.");
+        loadLogs().then(render);
+      });
+    });
+  });
+  document.querySelectorAll(".edit-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      showEditModal(btn.dataset.key, btn.dataset.label, btn.dataset.meal, btn.dataset.notes||"");
+    });
+  });
+  var exportBtn = document.getElementById("export-btn");
+  if (exportBtn) exportBtn.addEventListener("click", exportCSV);
+  if (view === "admin") bindAdminEvents();
+}
+
+function startNoteFlow() {
+  var af = allFoods();
+  var entries = selectedFoods.map(function(id){
+    var food = af.find(function(f){ return f.id===id; }) || {id:id,label:id,emoji:"&#x1F37D;"};
+    return {food:food, notes:""};
+  });
+  showNotesModal(entries, 0);
+}
+
+function showNotesModal(entries, idx) {
+  var old = document.getElementById("the-modal");
+  if (old) old.remove();
+  var entry = entries[idx];
+  var isLast = idx === entries.length - 1;
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "the-modal";
+  overlay.innerHTML = '<div class="modal">'
+    + '<div class="modal-food-header"><span class="modal-food-emoji">' + entry.food.emoji + '</span>'
+    + '<div><div class="modal-title">' + entry.food.label + '</div>'
+    + (entries.length > 1 ? '<span class="modal-step">' + (idx+1) + ' of ' + entries.length + '</span>' : '')
+    + '</div></div>'
+    + '<label>Notes (optional)</label>'
+    + '<textarea id="modal-notes" rows="3" placeholder="e.g. loved it, refused, mild reaction...">' + entry.notes + '</textarea>'
+    + '<div class="modal-btns">'
+    + (idx > 0 ? '<button class="modal-cancel" id="modal-back">&#x2190; Back</button>' : '')
+    + '<button class="modal-cancel" id="modal-skip">Skip</button>'
+    + '<button class="modal-save" id="modal-next">' + (isLast ? 'Save All &#x1F4BE;' : 'Next &#x27A1;') + '</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  setTimeout(function(){ var t = document.getElementById("modal-notes"); if(t) t.focus(); }, 100);
+  function go(notes) {
+    entries[idx].notes = notes;
+    if (isLast) { overlay.remove(); doSave(entries); }
+    else { overlay.remove(); showNotesModal(entries, idx+1); }
+  }
+  document.getElementById("modal-next").addEventListener("click", function(){
+    go(document.getElementById("modal-notes").value.trim());
+  });
+  document.getElementById("modal-skip").addEventListener("click", function(){ go(""); });
+  var backBtn = document.getElementById("modal-back");
+  if (backBtn) backBtn.addEventListener("click", function(){
+    entries[idx].notes = document.getElementById("modal-notes").value.trim();
+    overlay.remove();
+    showNotesModal(entries, idx-1);
+  });
+}
+
+function doSave(entries) {
+  var counts = foodCountMap();
+  var promises = entries.map(function(e){
+    return dbPost("/logs", {food:e.food.id, label:e.food.label, emoji:e.food.emoji, meal:currentMeal, notes:e.notes, timestamp:Date.now()});
+  });
+  Promise.all(promises).then(function(){
+    var newM = entries.filter(function(e){ return (counts[e.food.id]||0)+1===MILESTONE; });
+    selectedFoods = [];
+    toast("&#x2705; " + entries.length + " food" + (entries.length>1?"s":"") + " logged!");
+    if (newM.length) setTimeout(function(){ toast("&#x1F389; " + newM[0].food.label + " hit " + MILESTONE + " tries!", "green"); }, 800);
+    loadLogs().then(render);
+  }).catch(function(e){ toast("Save failed: " + e.message, "red"); });
+}
+
+function showEditModal(key, label, meal, notes) {
+  var old = document.getElementById("the-modal");
+  if (old) old.remove();
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "the-modal";
+  overlay.innerHTML = '<div class="modal">'
+    + '<div class="modal-title">Edit Entry</div>'
+    + '<label>Food name</label><input type="text" id="edit-label" value="' + label + '">'
+    + '<label>Meal</label><select id="edit-meal">'
+    + ["breakfast","lunch","dinner","snack"].map(function(m){
+        return '<option value="' + m + '"' + (meal===m?" selected":"") + '>' + mealLabel(m) + '</option>';
+      }).join("")
+    + '</select>'
+    + '<label>Notes</label><textarea id="edit-notes" rows="2">' + notes + '</textarea>'
+    + '<div class="modal-btns"><button class="modal-cancel" id="edit-cancel">Cancel</button><button class="modal-save" id="edit-save">Save</button></div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById("edit-cancel").addEventListener("click", function(){ overlay.remove(); });
+  overlay.addEventListener("click", function(e){ if(e.target===overlay) overlay.remove(); });
+  document.getElementById("edit-save").addEventListener("click", function(){
+    var newLabel = document.getElementById("edit-label").value.trim();
+    var newMeal = document.getElementById("edit-meal").value;
+    var newNotes = document.getElementById("edit-notes").value.trim();
+    if (!newLabel) return;
+    dbPatch("/logs/" + key, {label:newLabel, meal:newMeal, notes:newNotes}).then(function(){
+      overlay.remove();
+      toast("&#x2705; Updated!");
+      loadLogs().then(render);
+    });
+  });
+}
+
+
+// Common food emojis for picker
+var EMOJI_OPTIONS = [
+  "&#x1F34E;","&#x1F34C;","&#x1F34F;","&#x1F350;","&#x1F353;","&#x1F951;","&#x1F952;","&#x1F955;",
+  "&#x1F957;","&#x1F966;","&#x1F96C;","&#x1F96D;","&#x1F360;","&#x1F35A;","&#x1F35D;","&#x1F357;",
+  "&#x1F95A;","&#x1F95B;","&#x1F33E;","&#x1FAD9;","&#x1FAD8;","&#x1FAD0;","&#x1F7E3;","&#x1F96E;",
+  "&#x1F9C0;","&#x1F356;","&#x1F364;","&#x1F363;","&#x1F365;","&#x1F954;","&#x1F9C4;","&#x1F9C5;",
+  "&#x1F346;","&#x1F347;","&#x1F348;","&#x1F349;","&#x1F34A;","&#x1F34B;","&#x1F34D;","&#x1F96B;",
+  "&#x1F959;","&#x1F373;","&#x1F372;","&#x1F32D;","&#x1F35E;","&#x1F9C1;","&#x1F382;","&#x1F36E;"
+];
+
+function buildAdmin() {
+  var custom = getCustomFoods();
+  var builtInRows = FOODS.map(function(f){
+    return '<div class="admin-food-row">'
+      + '<span class="aemoji">' + f.emoji + '</span>'
+      + '<span class="alabel">' + f.label + '</span>'
+      + '<span class="abuilt">Built-in</span>'
+      + '</div>';
+  }).join("");
+  var customRows = custom.length ? custom.map(function(f){
+    return '<div class="admin-food-row">'
+      + '<span class="aemoji admin-emoji-btn" data-id="' + f.id + '" style="cursor:pointer" title="Change emoji">' + f.emoji + '</span>'
+      + '<span class="alabel">' + f.label + '</span>'
+      + '<button class="adel" data-remove="' + f.id + '">&#x1F5D1;</button>'
+      + '</div>';
+  }).join("") : '<div style="color:var(--muted);font-size:0.85rem;padding:8px 0">No custom foods added yet.</div>';
+
+  return '<section>'
+    + '<h2 class="section-title">&#x2699;&#xFE0F; Admin</h2>'
+    + '<div class="admin-info">&#x1F4A1; Built-in foods can't be removed but you can add your own below and pick their emoji.</div>'
+    + '<h3 style="font-weight:800;color:var(--muted);font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Add New Food</h3>'
+    + '<div id="emoji-picker-container"></div>'
+    + '<div class="admin-add-row">'
+    + '<span id="new-emoji-preview" style="font-size:1.6rem;cursor:pointer;border:2px solid var(--border);border-radius:8px;padding:4px 8px;background:var(--bg)" title="Pick emoji">&#x1F37D;&#xFE0F;</span>'
+    + '<input type="text" id="new-food-name" placeholder="Food name..." maxlength="30">'
+    + '<button class="pill-btn" id="admin-add-btn">+ Add</button>'
+    + '</div>'
+    + '<h3 style="font-weight:800;color:var(--muted);font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px">Custom Foods</h3>'
+    + '<div class="admin-food-list">' + customRows + '</div>'
+    + '<h3 style="font-weight:800;color:var(--muted);font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px">Built-in Foods</h3>'
+    + '<div class="admin-food-list">' + builtInRows + '</div>'
+    + '</section>';
+}
+
+function showEmojiPicker(targetId, currentEmoji) {
+  var container = document.getElementById("emoji-picker-container");
+  if (!container) return;
+  // Toggle off if already open for same target
+  if (container.dataset.target === targetId && container.innerHTML !== "") {
+    container.innerHTML = "";
+    container.dataset.target = "";
+    return;
+  }
+  container.dataset.target = targetId;
+  container.innerHTML = '<div class="emoji-picker">'
+    + '<div class="emoji-picker-title">Pick an emoji</div>'
+    + '<div class="emoji-grid">'
+    + EMOJI_OPTIONS.map(function(e){
+        return '<button class="emoji-opt' + (e===currentEmoji?" picked":"") + '" data-emoji="' + e + '">' + e + '</button>';
+      }).join("")
+    + '</div></div>';
+  container.querySelectorAll(".emoji-opt").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var picked = btn.dataset.emoji;
+      if (targetId === "new") {
+        var preview = document.getElementById("new-emoji-preview");
+        if (preview) preview.innerHTML = picked;
+        preview.dataset.emoji = picked;
+      } else {
+        // Update custom food emoji
+        var foods = getCustomFoods();
+        var food = foods.find(function(f){ return f.id===targetId; });
+        if (food) {
+          food.emoji = picked;
+          localStorage.setItem("cf", JSON.stringify(foods));
+          toast("&#x2705; Emoji updated!");
+          render();
+          return;
+        }
+      }
+      container.innerHTML = "";
+      container.dataset.target = "";
+      // re-highlight picked emoji
+      container.querySelectorAll && container.querySelectorAll(".emoji-opt").forEach(function(b){
+        b.classList.toggle("picked", b.dataset.emoji===picked);
+      });
+    });
+  });
+}
+
+function bindAdminEvents() {
+  // Emoji preview click - open picker for new food
+  var preview = document.getElementById("new-emoji-preview");
+  if (preview) preview.addEventListener("click", function(){
+    showEmojiPicker("new", preview.dataset.emoji || "&#x1F37D;&#xFE0F;");
+  });
+  // Add new food
+  var addBtn = document.getElementById("admin-add-btn");
+  if (addBtn) addBtn.addEventListener("click", function(){
+    var nameEl = document.getElementById("new-food-name");
+    var previewEl = document.getElementById("new-emoji-preview");
+    var name = nameEl.value.trim();
+    if (!name) { toast("Enter a food name first!", "red"); return; }
+    var emoji = previewEl.dataset.emoji || "&#x1F37D;&#xFE0F;";
+    var id = name.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+    if (FOODS.find(function(f){ return f.id===id; }) || getCustomFoods().find(function(f){ return f.id===id; })) {
+      toast("That food already exists!", "red"); return;
+    }
+    var foods = getCustomFoods();
+    foods.push({id:id, emoji:emoji, label:name});
+    localStorage.setItem("cf", JSON.stringify(foods));
+    toast("&#x2705; " + name + " added!");
+    render();
+  });
+  // Remove custom food
+  document.querySelectorAll("[data-remove]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.dataset.remove;
+      if (!confirm("Remove this food?")) return;
+      var foods = getCustomFoods().filter(function(f){ return f.id!==id; });
+      localStorage.setItem("cf", JSON.stringify(foods));
+      toast("Removed.");
+      render();
+    });
+  });
+  // Change emoji on existing custom food
+  document.querySelectorAll(".admin-emoji-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      showEmojiPicker(btn.dataset.id, btn.innerHTML);
+    });
+  });
+}
+
+function exportCSV() {
+  var rows = [["Date","Time","Meal","Food","Notes"]];
+  allLogs.slice().reverse().forEach(function(l){
+    rows.push([fmtDate(l.timestamp), fmtTime(l.timestamp), l.meal, l.label, l.notes||""]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download = "florries-tracker.csv";
+  a.click();
+  toast("CSV downloaded!");
+}
+
+// Nav buttons
+document.getElementById("nav-log").addEventListener("click", function(){ view="log"; focusFood=null; render(); });
+document.getElementById("nav-history").addEventListener("click", function(){ view="history"; focusFood=null; render(); });
+document.getElementById("nav-food").addEventListener("click", function(){ view="food"; focusFood=null; render(); });
+
+// Start
+render();
+loadLogs().then(render);
+setInterval(function(){ loadLogs().then(function(){ render(); }); }, 5000);
+
+</script>
+</body>
+</html>
